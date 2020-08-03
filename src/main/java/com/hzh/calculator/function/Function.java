@@ -9,41 +9,36 @@ import com.hzh.calculator.util.ClassUtil;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Function extends AbstractToken implements Computable {
     protected static Map<String, Computable> registry = new HashMap<>();
 
-    public static void main(String[] args) {
-        Set<Map.Entry<String, Computable>> entries = registry.entrySet();
-        for (Map.Entry<String, Computable> entry : entries) {
-            System.out.println(entry);
-        }
-
-        System.out.println("asdfasdfasdfasdfa");
-    }
-
-    /*static {
-        try {
-            List<Class<?>> classes = ClassUtil.getClasses(Function.class);
-            for (Class<?> cls : classes) {
-                if (Computable.class.isAssignableFrom(cls)) {
-                    registry.put(cls.getSimpleName(), null);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            //do nothing
-        }
-    }*/
-
     private final String name;
 
     private final Number[] params;
 
     private static final Pattern pattern = Pattern.compile("(?<name>[A-Za-z]+)\\(\\s*(?<params>.*)\\s*\\)");
+
+    //查找此类同一包下的所有function类并实例化加载注册
+    static {
+        try {
+            List<Class<?>> classes = ClassUtil.getClassesInSamePackage(Function.class, true);
+            for (Class<?> cls : classes) {
+                if (!cls.equals(Function.class) && Computable.class.isAssignableFrom(cls)) {
+                    String funcName = cls.getSimpleName()
+                            .replace("Function", "")
+                            .toLowerCase();
+                    registry.put(funcName, (Computable) cls.newInstance());
+                }
+
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error occurs while loading Function");
+        }
+    }
+
 
     public Function(String exp) {
         Matcher matcher = pattern.matcher(exp);
@@ -68,7 +63,6 @@ public class Function extends AbstractToken implements Computable {
         Computable func = registry.get(name);
         if (func == null)
             throw new RuntimeException("function not existed: " + name);
-
         return func.getResult(params);
     }
 
